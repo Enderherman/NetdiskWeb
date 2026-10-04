@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { accountApi } from '../api/account'
+import { qqApi, qqNavigation, qqErrorMessage } from '../api/qq'
 import { errorMessage, useAccount } from '../composables/account'
 import { safeReturnPath } from '../router/guards'
 import AppIcon from '../components/AppIcon.vue'
@@ -24,20 +25,42 @@ const emailCheckCode = ref('')
 const sendError = ref('')
 const cooldown = ref(0)
 const emailEnabled = ref<boolean | null>(null)
+const qqEnabled = ref<boolean | null>(null)
+const qqStarting = ref(false)
+const qqCallbackError = computed(() => qqErrorMessage(route.query.qqError))
+let qqGeneration = 0
+let qqController: AbortController | undefined
 const capabilityError = ref('')
 const captcha = ref<InstanceType<typeof CaptchaInput>>()
 const emailCaptcha = ref<InstanceType<typeof CaptchaInput>>()
 let cooldownTimer: ReturnType<typeof setInterval> | undefined
 
 watch(mode, () => {
+  if (qqStarting.value) busy.value = false
+  qqGeneration++; qqController?.abort(); qqStarting.value = false
   Object.assign(fields, { password: '', confirmPassword: '', checkCode: '', emailCode: '' })
   error.value = ''; notice.value = ''; emailChallenge.value = false; sendError.value = ''
 })
-onBeforeUnmount(() => clearInterval(cooldownTimer))
+onBeforeUnmount(() => { clearInterval(cooldownTimer); qqGeneration++; qqController?.abort() })
 onMounted(async () => {
-  try { emailEnabled.value = (await accountApi.capabilities()).emailVerificationEnabled }
-  catch (reason) { capabilityError.value = errorMessage(reason) }
+  try { const capabilities = await accountApi.capabilities(); emailEnabled.value = capabilities.emailVerificationEnabled; qqEnabled.value = capabilities.qqLoginEnabled === true }
+  catch (reason) { capabilityError.value = errorMessage(reason); qqEnabled.value = false }
 })
+
+async function startQq() {
+  if (!qqEnabled.value || busy.value || sending.value || qqStarting.value) return
+  const generation = ++qqGeneration
+  qqController = new AbortController()
+  busy.value = true; qqStarting.value = true; error.value = ''
+  try {
+    const url = await qqApi.start(route.query.redirect, qqController.signal)
+    if (generation !== qqGeneration) return
+    fields.password = ''; fields.checkCode = ''
+    qqNavigation.open(url)
+  } catch (reason) {
+    if (generation === qqGeneration) error.value = errorMessage(reason)
+  } finally { if (generation === qqGeneration) { busy.value = false; qqStarting.value = false } }
+}
 
 function validEmail() {
   return /^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/.test(fields.email.trim()) && fields.email.trim().length <= 150
@@ -106,6 +129,7 @@ async function submit() {
       <aside class="auth-story" aria-label="Netdisk 介绍"><p class="eyebrow">A SPACE THAT FEELS LIKE YOU</p><h1>重要的，<br />都在这里<span class="heading-period">.</span></h1><p>给文件一个归处，<br />给生活多一点从容。</p><div class="auth-art" aria-hidden="true"><div class="auth-art-orbit" /><div class="auth-art-sheet"><AppIcon name="files" :size="45" /><i /><i /></div><div class="auth-art-folder"><AppIcon name="folder" :size="80" /></div><span>YOUR PERSONAL CLOUD</span></div><div class="auth-story-footer"><span class="quiet-dot" />属于你的空间，自在有序。</div></aside>
       <section class="auth-card" :aria-labelledby="'auth-title'">
         <p class="eyebrow">{{ mode === 'login' ? 'GOOD TO SEE YOU AGAIN' : mode === 'register' ? 'START SOMETHING GOOD' : 'LET’S GET YOU BACK' }}</p><h2 id="auth-title">{{ title }}<span class="heading-period">.</span></h2><p class="auth-description">{{ mode === 'register' ? '用邮箱创建账号，开始你的全新空间。' : mode === 'reset' ? '通过邮箱验证，设置一个新的密码。' : '登录 Netdisk，回到属于你的空间。' }}</p>
+        <p v-if="mode === 'login' && qqCallbackError" class="form-notice" role="status">{{ qqCallbackError }}</p>
         <p v-if="route.query.expired" class="form-notice" role="status">登录已过期，请重新登录。</p>
         <p v-if="mode === 'login' && route.query.completed === 'register'" class="form-notice success" role="status">账号创建成功，现在可以登录了。</p>
         <p v-if="mode === 'login' && route.query.completed === 'reset'" class="form-notice success" role="status">密码已更新，请使用新密码登录。</p>
@@ -125,9 +149,15 @@ async function submit() {
           <p v-if="error" class="form-error" role="alert">{{ error }}</p><p v-if="notice" class="form-notice success" role="status">{{ notice }}</p>
           <button class="primary-button auth-submit" type="submit" :disabled="busy || sending || (mode !== 'login' && emailEnabled === false)"><span v-if="busy" class="loading-dot" />{{ busy ? '正在处理…' : mode === 'register' ? '创建账号' : mode === 'reset' ? '更新密码' : '登录' }}<AppIcon v-if="!busy" name="arrow" :size="17" /></button>
         </form>
+        <div v-if="mode === 'login'" class="qq-login"><button v-if="qqEnabled" class="secondary-button" type="button" :disabled="busy || sending" @click="startQq">{{ qqStarting ? '正在跳转 QQ…' : '使用 QQ 登录' }}</button><p v-else-if="qqEnabled === false" class="field-hint">QQ 登录暂未开放</p></div>
         <p class="auth-switch" v-if="mode === 'login'">还没有账号？<RouterLink to="/auth/register">创建账号<AppIcon name="arrow" :size="14" /></RouterLink></p><p class="auth-switch" v-else>已有账号？<RouterLink to="/auth/login">返回登录<AppIcon name="arrow" :size="14" /></RouterLink></p>
       </section>
     </main>
     <footer class="auth-footer"><span>简单一点，空间多一点。</span><span>Netdisk · v{{ version }}</span></footer>
   </div>
 </template>
+
+<style scoped>
+.qq-login { margin-top: 18px; text-align: center; }
+.qq-login .secondary-button { width: 100%; justify-content: center; }
+</style>

@@ -8,6 +8,7 @@ import { ApiError, SESSION_EXPIRED_EVENT } from '../api/client'
 import { useAccount } from '../composables/account'
 import { useUploadQueue } from '../uploads/uploadQueue'
 import { filesApi } from '../api/files'
+import { qqApi, qqNavigation } from '../api/qq'
 
 const sampleUser = { userId: 'test-id', nickName: '测试用户', isAdmin: false, avatar: null }
 
@@ -27,6 +28,45 @@ async function renderAuth(path = '/auth/login') {
 }
 
 describe('账号表单', () => {
+  it('QQ未配置不提供假登录按钮，固定回调分类显示中文原因', async () => {
+    const start = vi.spyOn(qqApi, 'start')
+    const { wrapper } = await renderAuth('/auth/login?qqError=expired')
+    expect(wrapper.text()).toContain('QQ 登录暂未开放')
+    expect(wrapper.text()).toContain('QQ 登录请求已过期')
+    expect(wrapper.find('.qq-login button').exists()).toBe(false)
+    expect(start).not.toHaveBeenCalled()
+  })
+  it('QQ已配置才允许发起，等待中只提交一次并携带分享回跳', async () => {
+    vi.mocked(accountApi.capabilities).mockResolvedValue({ emailVerificationEnabled: true, qqLoginEnabled: true })
+    let finish!: (url: string) => void
+    const start = vi.spyOn(qqApi, 'start').mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    const open = vi.spyOn(qqNavigation, 'open').mockImplementation(() => {})
+    const { wrapper } = await renderAuth('/auth/login?redirect=/s/shareA')
+    await wrapper.get('.qq-login button').trigger('click')
+    await wrapper.get('.qq-login button').trigger('click')
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledWith('/s/shareA', expect.any(AbortSignal))
+    expect(wrapper.get('.qq-login button').attributes('disabled')).toBeDefined()
+    finish('https://graph.qq.com/oauth2.0/authorize'); await flushPromises()
+    expect(open).toHaveBeenCalledOnce()
+    expect(useAccount().authenticated.value).toBe(false)
+  })
+  it('授权失败保留登录页，离开登录页后的迟到响应不跳站', async () => {
+    vi.mocked(accountApi.capabilities).mockResolvedValue({ emailVerificationEnabled: true, qqLoginEnabled: true })
+    const start = vi.spyOn(qqApi, 'start').mockRejectedValueOnce(new ApiError('请求过于频繁', 429))
+    const open = vi.spyOn(qqNavigation, 'open').mockImplementation(() => {})
+    const { wrapper, router } = await renderAuth()
+    await wrapper.get('.qq-login button').trigger('click'); await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toBe('请求过于频繁')
+    let finish!: (url: string) => void
+    start.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await wrapper.get('.qq-login button').trigger('click')
+    await router.push('/auth/register'); await flushPromises()
+    expect(wrapper.get('.auth-submit').attributes('disabled')).toBeUndefined()
+    finish('https://graph.qq.com/oauth2.0/authorize'); await flushPromises()
+    expect(open).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.path).toBe('/auth/register')
+  })
   it('登录绑定上传队列身份，901通知立即清空身份并返回登录', async () => {
     vi.spyOn(accountApi, 'login').mockResolvedValue(sampleUser)
     const setOwner = vi.spyOn(useUploadQueue(), 'setOwner')
