@@ -10,7 +10,7 @@ export function installAuthGuard(router: Router) {
     const account = useAccount()
     const authenticated = await account.ensureSession()
     if (to.meta.public) {
-      if (authenticated) return safeReturnPath(to.query.redirect)
+      if (authenticated && to.path.startsWith('/auth/')) return safeReturnPath(to.query.redirect)
       return true
     }
     if (!authenticated) return { path: '/auth/login', query: { redirect: to.fullPath } }

@@ -13,7 +13,7 @@ defineEmits<{ navigate: [] }>()
   <nav class="primary-nav" aria-label="主导航">
     <RouterLink to="/drive" @click="$emit('navigate')"><AppIcon name="files" /><span>我的文件</span></RouterLink>
     <RouterLink to="/uploads" @click="$emit('navigate')"><AppIcon name="upload" /><span>上传管理</span></RouterLink>
-    <button disabled title="分享功能即将开放"><AppIcon name="share" /><span>我的分享</span></button>
+    <RouterLink to="/shares" @click="$emit('navigate')"><AppIcon name="share" /><span>我的分享</span></RouterLink>
     <button disabled title="回收站即将开放"><AppIcon name="trash" /><span>回收站</span></button>
   </nav>
   <div class="sidebar-spacer" />

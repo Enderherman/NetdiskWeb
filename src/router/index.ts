@@ -3,6 +3,8 @@ import DriveView from '../views/DriveView.vue'
 import AppearanceView from '../views/AppearanceView.vue'
 import AuthView from '../views/AuthView.vue'
 import UploadView from '../views/UploadView.vue'
+import ShareManageView from '../features/shares/ShareManageView.vue'
+import PublicShareView from '../features/shares/PublicShareView.vue'
 import { installAuthGuard } from './guards'
 
 export const routes = [
@@ -12,6 +14,8 @@ export const routes = [
   { path: '/auth/reset', component: AuthView, meta: { title: '找回密码', public: true } },
   { path: '/drive', component: DriveView, meta: { title: '我的文件' } },
   { path: '/uploads', component: UploadView, meta: { title: '上传管理' } },
+  { path: '/shares', component: ShareManageView, meta: { title: '我的分享' } },
+  { path: '/s/:shareId', component: PublicShareView, meta: { title: '文件分享', public: true } },
   { path: '/appearance', component: AppearanceView, meta: { title: '外观设置' } },
   { path: '/:pathMatch(.*)*', redirect: '/drive' },
 ]
