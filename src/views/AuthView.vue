@@ -7,6 +7,7 @@ import { safeReturnPath } from '../router/guards'
 import AppIcon from '../components/AppIcon.vue'
 import CaptchaInput from '../components/CaptchaInput.vue'
 import ThemeSwitcher from '../components/ThemeSwitcher.vue'
+import { version } from '../../package.json'
 
 const route = useRoute()
 const router = useRouter()
@@ -127,6 +128,6 @@ async function submit() {
         <p class="auth-switch" v-if="mode === 'login'">还没有账号？<RouterLink to="/auth/register">创建账号<AppIcon name="arrow" :size="14" /></RouterLink></p><p class="auth-switch" v-else>已有账号？<RouterLink to="/auth/login">返回登录<AppIcon name="arrow" :size="14" /></RouterLink></p>
       </section>
     </main>
-    <footer class="auth-footer"><span>简单一点，空间多一点。</span><span>Netdisk · v0.2.0</span></footer>
+    <footer class="auth-footer"><span>简单一点，空间多一点。</span><span>Netdisk · v{{ version }}</span></footer>
   </div>
 </template>

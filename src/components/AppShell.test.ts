@@ -1,8 +1,11 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App.vue'
 import { routes } from '../router'
+import { filesApi } from '../api/files'
+
+beforeEach(() => { vi.spyOn(filesApi, 'list').mockResolvedValue({ list: [], totalCount: 0, pageNo: 1, pageSize: 20, pageTotal: 1 }) })
 
 async function renderApp() {
   const router = createRouter({ history: createMemoryHistory(), routes })
@@ -55,9 +58,9 @@ describe('导航与主题控件', () => {
     expect(wrapper.get('h1').text()).toContain('舒服的外观')
   })
 
-  it('侧栏与设置页共享同一主题，并明确标示未接入文件功能', async () => {
+  it('侧栏与设置页共享同一主题，并明确标示未开放上传功能', async () => {
     const { wrapper, router } = await renderApp()
-    expect(wrapper.text()).toContain('当前为界面预览，尚未显示云端文件')
+    expect(wrapper.text()).toContain('上传与在线预览将在后续版本开放')
     expect(wrapper.get('.page-actions .primary-button').attributes('disabled')).toBeDefined()
     await wrapper.get('.desktop-sidebar button[title="深色"]').trigger('click')
     expect(document.documentElement.dataset.theme).toBe('dark')

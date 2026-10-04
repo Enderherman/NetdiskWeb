@@ -19,6 +19,16 @@ const paths: Record<string, string> = {
   grid: 'M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z',
   check: 'm5 12 4 4L19 6',
   logout: 'M10 4H4v16h6M9 12h12m-4-4 4 4-4 4',
+  search: 'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Zm-2 5 6 6',
+  list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  download: 'M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4',
+  move: 'M3 8V5h7l3 3h8v12H3ZM8 14h8m-3-3 3 3-3 3',
+  edit: 'm15 4 5 5M4 20l5-1L21 7l-4-4L5 15l-1 5Z',
+  image: 'M3 3h18v18H3ZM3 16l6-6 8 11M13 14l4-4 4 5M16 7h.01',
+  video: 'M3 5h13v14H3ZM16 10l5-3v10l-5-3',
+  music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3h3M20 16a3 3 0 1 1-3-3h3',
+  refresh: 'M20 7v5h-5M4 17v-5h5M20 12a8 8 0 0 0-14-5M4 12a8 8 0 0 0 14 5',
 }
 </script>
 
