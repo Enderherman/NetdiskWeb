@@ -1,0 +1,26 @@
+.recycle-policy { display: flex; gap: 13px; align-items: flex-start; border: 1px solid var(--line); border-radius: 11px; padding: 19px 21px; background: var(--card); margin-bottom: 23px; }
+.recycle-policy > svg { color: var(--accent); margin-top: 2px; }
+.recycle-policy h2 { font-size: 13px; font-weight: 550; line-height: 1.7; }
+.recycle-policy p { font-size: 11px; color: var(--muted); line-height: 1.85; margin-top: 6px; }
+.recycle-policy button { background: transparent; text-decoration: underline; text-underline-offset: 3px; font-size: 11px; margin-top: 8px; }
+.recycle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 17px; padding: 23px; }
+.recycle-card-shell { min-width: 0; }
+.recycle-card-shell > .file-grid { display: block; padding: 0; }
+.recycle-card-shell .file-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 0; }
+.recycle-card-shell .file-card-open { min-height: 142px; }
+.recycle-entry-time { padding: 13px 15px; border: 1px solid var(--line); border-radius: 0 0 10px 10px; background: var(--sidebar); color: var(--muted); font-size: 10px; line-height: 1.9; }
+.recycle-entry-time p { overflow-wrap: anywhere; }
+.recycle-entry-time .overdue { color: #b65347; }
+:root[data-theme="dark"] .recycle-entry-time .overdue { color: #e39786; }
+.recycle-page-select { display: flex; gap: 9px; align-items: center; color: var(--muted); font-size: 12px; }
+.recycle-page-select input { accent-color: var(--accent); }
+.recycle-count { color: var(--muted); font-size: 12px; }
+.recycle-state { display: grid; justify-items: center; gap: 16px; padding: 65px 24px; text-align: center; color: var(--muted); }
+.recycle-state h2 { font-size: 20px; font-weight: 550; color: var(--ink); }
+.recycle-state p { font-size: 13px; line-height: 1.9; max-width: 480px; }
+.recycle-confirm { display: flex; align-items: flex-start; gap: 9px; padding: 13px; margin-top: 18px; border: 1px solid var(--line); border-radius: 9px; font-size: 12px; line-height: 1.8; background: var(--surface); }
+.recycle-confirm input { margin-top: 4px; accent-color: #b84949; }
+.recycle-scope { padding: 13px 15px; border: 1px solid rgb(180 73 73 / 22%); background: rgb(180 73 73 / 5%); border-radius: 9px; margin-top: 17px; font-size: 12px; line-height: 1.9; }
+.recycle-scope strong { display: block; font-weight: 600; }
+.recycle-footnote { font-size: 10px; line-height: 1.8; color: var(--subtle); margin-top: 16px; }
+@media (max-width: 600px) { .recycle-grid { padding: 17px; gap: 15px; } .recycle-policy { padding: 16px; } }

@@ -14,7 +14,7 @@ defineEmits<{ navigate: [] }>()
     <RouterLink to="/drive" @click="$emit('navigate')"><AppIcon name="files" /><span>我的文件</span></RouterLink>
     <RouterLink to="/uploads" @click="$emit('navigate')"><AppIcon name="upload" /><span>上传管理</span></RouterLink>
     <RouterLink to="/shares" @click="$emit('navigate')"><AppIcon name="share" /><span>我的分享</span></RouterLink>
-    <button disabled title="回收站即将开放"><AppIcon name="trash" /><span>回收站</span></button>
+    <RouterLink to="/recycle" @click="$emit('navigate')"><AppIcon name="trash" /><span>回收站</span></RouterLink>
   </nav>
   <div class="sidebar-spacer" />
   <div v-if="account.authenticated.value" class="storage-usage"><div class="storage-heading"><AppIcon name="folder" :size="16" /><strong>我的空间</strong><span v-if="account.space.value">{{ Math.round(account.spacePercent.value) }}%</span></div><template v-if="account.space.value"><div class="space-track" role="progressbar" aria-label="已使用存储空间" :aria-valuenow="Math.round(account.spacePercent.value)" aria-valuemin="0" aria-valuemax="100"><span :style="{ width: `${account.spacePercent.value}%` }" /></div><p>{{ formatBytes(account.space.value.useSpace) }} / {{ formatBytes(account.space.value.totalSpace) }}</p></template><p v-else>空间信息暂不可用 <button type="button" @click="account.refreshSpace">重试</button></p></div>
