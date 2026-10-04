@@ -10,6 +10,7 @@ import AppIcon from '../components/AppIcon.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import FolderPicker from '../components/FolderPicker.vue'
 import FileCollection from '../components/FileCollection.vue'
+import { FILES_CHANGED_EVENT } from '../uploads/uploadQueue'
 
 const route = useRoute()
 const router = useRouter()
@@ -90,7 +91,9 @@ async function loadFiles() {
   } finally { if (currentRequest === requestId) loading.value = false }
 }
 watch(() => route.fullPath, () => { searchInput.value = search.value; void loadFiles() }, { immediate: true })
-onBeforeUnmount(() => { requestId++; controller?.abort() })
+function refreshAfterUpload() { void loadFiles() }
+window.addEventListener(FILES_CHANGED_EVENT, refreshAfterUpload)
+onBeforeUnmount(() => { requestId++; controller?.abort(); window.removeEventListener(FILES_CHANGED_EVENT, refreshAfterUpload) })
 
 async function openFolder(file: FileItem) {
   error.value = ''
@@ -159,7 +162,7 @@ async function download(file: FileItem) {
 
 <template>
   <section class="drive-view">
-    <div class="page-heading"><div><p class="eyebrow">YOUR PERSONAL CLOUD</p><h1>我的文件<span class="heading-period">.</span></h1><p class="page-description">留一处空间，给每一份重要。</p></div><div class="page-actions"><button class="secondary-button" :disabled="globalSearch || loading || Boolean(error)" :title="globalSearch ? '返回文件夹后新建' : '在当前文件夹新建'" @click="openModal('create')"><AppIcon name="plus" :size="17" /><span>新建文件夹</span></button><button class="primary-button" disabled title="上传功能将在后续版本开放"><AppIcon name="upload" :size="17" /><span>上传文件</span></button></div></div>
+    <div class="page-heading"><div><p class="eyebrow">YOUR PERSONAL CLOUD</p><h1>我的文件<span class="heading-period">.</span></h1><p class="page-description">留一处空间，给每一份重要。</p></div><div class="page-actions"><button class="secondary-button" :disabled="globalSearch || loading || Boolean(error)" :title="globalSearch ? '返回文件夹后新建' : '在当前文件夹新建'" @click="openModal('create')"><AppIcon name="plus" :size="17" /><span>新建文件夹</span></button><button class="primary-button" :disabled="globalSearch || loading || Boolean(error)" title="上传到当前文件夹" @click="router.push({ path: '/uploads', query: { pid: currentPid } })"><AppIcon name="upload" :size="17" /><span>上传文件</span></button></div></div>
     <div class="drive-filterbar"><nav class="category-tabs" aria-label="文件分类"><button v-for="item in categories" :key="item.value" :aria-current="category === item.value ? 'page' : undefined" @click="selectCategory(item.value)">{{ item.label }}</button></nav><form class="file-search" role="search" @submit.prevent="submitSearch"><AppIcon name="search" :size="17" /><input v-model="searchInput" aria-label="搜索全部文件" placeholder="搜索你的文件" maxlength="200" /><button v-if="search" class="icon-button search-clear" type="button" aria-label="清除搜索" @click="searchInput = ''; submitSearch()"><AppIcon name="close" :size="15" /></button><button class="search-submit" type="submit">搜索</button></form></div>
     <div v-if="notice" class="drive-notice" role="status"><AppIcon name="check" :size="16" /><span>{{ notice }}</span><button class="icon-button" aria-label="关闭提示" @click="notice = ''"><AppIcon name="close" :size="14" /></button></div>
     <section class="file-surface live-file-surface" aria-label="文件列表" :aria-busy="loading">
@@ -171,7 +174,7 @@ async function download(file: FileItem) {
       <FileCollection v-else :items="page.list" :selected="selectedIds" :layout="layout" @select="toggleFile" @select-all="selectedIds = $event" @open="$event.folderType === 1 ? openFolder($event) : openModal('detail', [$event])" @detail="openModal('detail', [$event])" />
       <div v-if="!loading && !error" class="file-pagination"><span>共 {{ page.totalCount }} 项<span v-if="selectedIds.length"> · 已选 {{ selectedIds.length }} 项</span></span><div><label for="page-size">每页</label><select id="page-size" :value="pageSize" @change="navigate({ size: ($event.target as HTMLSelectElement).value, page: undefined })"><option :value="20">20</option><option :value="50">50</option><option :value="100">100</option></select><button class="icon-button" aria-label="上一页" :disabled="page.pageNo <= 1" @click="navigate({ page: page.pageNo - 1 })">‹</button><span>{{ page.pageNo }} / {{ Math.max(1, page.pageTotal) }}</span><button class="icon-button" aria-label="下一页" :disabled="page.pageNo >= page.pageTotal" @click="navigate({ page: page.pageNo + 1 })">›</button></div></div>
     </section>
-    <p class="drive-footnote">{{ globalSearch ? '分类与搜索会查找所有目录中的文件。' : '文件夹优先排列。上传与在线预览将在后续版本开放。' }}</p>
+    <p class="drive-footnote">{{ globalSearch ? '分类与搜索会查找所有目录中的文件。' : '文件夹优先排列。在线预览将在后续版本开放。' }}</p>
     <ModalDialog v-if="modal" :key="modal" :title="dialogTitle" :busy="busy || downloading" @close="modal = null">
       <form v-if="modal === 'create' || modal === 'rename'" id="name-form" @submit.prevent="performAction"><div class="form-field"><label for="file-name">{{ modal === 'create' ? '文件夹名称' : '完整名称' }}</label><input id="file-name" v-model="nameInput" :disabled="busy" maxlength="200" autocomplete="off" :placeholder="modal === 'create' ? '给新文件夹起个名字' : ''" /><p v-if="modal === 'rename' && targets[0]?.folderType === 0" class="field-hint">请保留需要的扩展名。重命名不会转换文件格式。</p></div></form>
       <template v-else-if="modal === 'delete'"><p class="dialog-description">将 {{ targets.length }} 项移入回收站？文件会保留在回收站中，此操作不会立即永久删除。</p><ul class="target-list"><li v-for="file in targets.slice(0, 5)" :key="file.fileId"><AppIcon :name="fileIcon(file)" :size="17" /><span>{{ file.fileName }}</span></li><li v-if="targets.length > 5">以及另外 {{ targets.length - 5 }} 项</li></ul><p class="field-hint">回收站恢复入口将在后续版本开放。</p></template>

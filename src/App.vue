@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { onBeforeUnmount, provide } from 'vue'
+import { onBeforeUnmount, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createTheme } from './composables/theme'
 import AppShell from './components/AppShell.vue'
 import { SESSION_EXPIRED_EVENT } from './api/client'
 import { useAccount } from './composables/account'
+import { useUploadQueue } from './uploads/uploadQueue'
 provide('theme', createTheme())
 const route = useRoute()
 const router = useRouter()
 const account = useAccount()
+const uploads = useUploadQueue()
+watch(() => account.user.value?.userId, userId => uploads.setOwner(userId || ''), { immediate: true, flush: 'sync' })
 function onSessionExpired() {
   account.clearSession()
   if (!route.meta.public && route.path !== '/') void router.replace({ path: '/auth/login', query: { redirect: route.fullPath, expired: '1' } })

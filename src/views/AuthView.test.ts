@@ -4,8 +4,10 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import App from '../App.vue'
 import { routes } from '../router'
 import { accountApi } from '../api/account'
-import { ApiError } from '../api/client'
+import { ApiError, SESSION_EXPIRED_EVENT } from '../api/client'
 import { useAccount } from '../composables/account'
+import { useUploadQueue } from '../uploads/uploadQueue'
+import { filesApi } from '../api/files'
 
 const sampleUser = { userId: 'test-id', nickName: '测试用户', isAdmin: false, avatar: null }
 
@@ -13,6 +15,7 @@ beforeEach(() => {
   useAccount().clearSession()
   vi.spyOn(accountApi, 'capabilities').mockResolvedValue({ emailVerificationEnabled: true, qqLoginEnabled: false })
   vi.spyOn(accountApi, 'space').mockResolvedValue({ useSpace: 512, totalSpace: 1024 })
+  vi.spyOn(filesApi, 'list').mockResolvedValue({ list: [], totalCount: 0, pageNo: 1, pageSize: 20, pageTotal: 1 })
 })
 
 async function renderAuth(path = '/auth/login') {
@@ -24,6 +27,21 @@ async function renderAuth(path = '/auth/login') {
 }
 
 describe('账号表单', () => {
+  it('登录绑定上传队列身份，901通知立即清空身份并返回登录', async () => {
+    vi.spyOn(accountApi, 'login').mockResolvedValue(sampleUser)
+    const setOwner = vi.spyOn(useUploadQueue(), 'setOwner')
+    const { wrapper, router } = await renderAuth()
+    await wrapper.get('#email').setValue('someone@example.com')
+    await wrapper.get('#password').setValue('Secret1!')
+    await wrapper.get('#check-code').setValue('AB123')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(setOwner).toHaveBeenLastCalledWith('test-id')
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+    await flushPromises()
+    expect(setOwner).toHaveBeenLastCalledWith('')
+    expect(router.currentRoute.value.path).toBe('/auth/login')
+  })
   it('拦截空输入并显示错误，不发送登录请求', async () => {
     const login = vi.spyOn(accountApi, 'login')
     const { wrapper } = await renderAuth()

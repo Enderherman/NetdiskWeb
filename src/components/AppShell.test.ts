@@ -58,10 +58,11 @@ describe('导航与主题控件', () => {
     expect(wrapper.get('h1').text()).toContain('舒服的外观')
   })
 
-  it('侧栏与设置页共享同一主题，并明确标示未开放上传功能', async () => {
+  it('侧栏与设置页共享同一主题，并提供上传管理入口', async () => {
     const { wrapper, router } = await renderApp()
-    expect(wrapper.text()).toContain('上传与在线预览将在后续版本开放')
-    expect(wrapper.get('.page-actions .primary-button').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('.desktop-sidebar a[href="/uploads"]').text()).toBe('上传管理')
+    await flushPromises()
+    expect(wrapper.get('.page-actions .primary-button').attributes('disabled')).toBeUndefined()
     await wrapper.get('.desktop-sidebar button[title="深色"]').trigger('click')
     expect(document.documentElement.dataset.theme).toBe('dark')
     await router.push('/appearance')
