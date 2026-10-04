@@ -1,0 +1,45 @@
+.preview-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 11px; margin-bottom: 17px; }
+.preview-toolbar .text-button { margin-left: auto; font-size: 11px; }
+.preview-state { min-height: 290px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 17px; padding: 30px 22px; background: var(--sidebar); border: 1px solid var(--line); border-radius: 11px; text-align: center; color: var(--muted); }
+.preview-state h3 { margin: 0; color: var(--ink); font-size: 17px; font-weight: 500; }
+.preview-state p { font-size: 12px; line-height: 1.9; max-width: 440px; }
+.preview-limit { padding: 11px 14px; font-size: 10px; color: var(--muted); line-height: 1.8; background: var(--sidebar); border-bottom: 1px solid var(--line); }
+.text-preview { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--sidebar); }
+.text-preview pre { margin: 0; padding: 20px; max-height: min(60dvh, 640px); overflow: auto; font-family: Consolas, "Cascadia Code", monospace; font-size: 12px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+.preview-empty { padding: 45px 20px; text-align: center; color: var(--subtle); font-size: 13px; }
+.image-preview { text-align: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--sidebar); }
+.image-preview > img { display: block; max-width: 100%; max-height: 62dvh; height: auto; width: auto; margin: 0 auto; object-fit: contain; }
+.image-preview > .preview-limit { border: 0; border-top: 1px solid var(--line); }
+.preview-loading-label { color: var(--muted); font-size: 12px; line-height: 1.8; padding: 16px; text-align: center; }
+.pdf-preview { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--sidebar); }
+.pdf-preview iframe { display: block; border: 0; width: 100%; height: min(65dvh, 700px); background: var(--surface); }
+.pdf-preview .preview-limit { border-bottom: 0; border-top: 1px solid var(--line); }
+.pdf-canvas-preview { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--sidebar); }
+.pdf-controls { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.pdf-controls > div { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; }
+.pdf-controls button { font-size: 21px; width: 29px; height: 29px; }
+.pdf-controls button:disabled { opacity: .35; }
+.pdf-canvas-stage { max-height: 62dvh; overflow: auto; padding: 12px; }
+.pdf-canvas-stage canvas { display: block; max-width: none; height: auto !important; margin: auto; box-shadow: 0 2px 13px rgb(0 0 0 / 8%); background: #fff; }
+.pdf-canvas-preview > .preview-limit { border-top: 1px solid var(--line); border-bottom: 0; }
+.media-preview { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--sidebar); }
+.media-preview video { display: block; width: 100%; max-height: 60dvh; min-height: 200px; background: #171717; }
+.media-preview audio { width: min(100%, 500px); display: block; }
+.media-preview > .preview-limit { border-bottom: 0; }
+.audio-preview { min-height: 270px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 25px; color: var(--muted); }
+.audio-preview > p:not(.preview-limit) { font-size: 12px; }
+.audio-preview > .preview-limit { padding: 0; }
+.preview-download-notice { font-size: 11px; color: var(--accent); line-height: 1.8; margin-top: 15px; }
+.has-thumbnail { overflow: hidden; border-radius: 5px; }
+.has-thumbnail > img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 600px) {
+  .preview-toolbar { gap: 8px; font-size: 10px; }
+  .preview-toolbar .text-button { font-size: 10px; }
+  .preview-state { min-height: 260px; padding-inline: 17px; }
+  .text-preview pre { padding: 14px; font-size: 11px; }
+  .preview-limit { font-size: 9px; padding: 10px 12px; }
+  .image-preview > img { max-height: 55dvh; }
+  .pdf-preview iframe { height: 60dvh; }
+  .media-preview video { min-height: 165px; }
+  .audio-preview { padding: 20px 12px; }
+}

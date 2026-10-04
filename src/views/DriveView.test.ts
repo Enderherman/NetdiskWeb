@@ -5,6 +5,9 @@ import { filesApi } from '../api/files'
 import { ApiError } from '../api/client'
 import DriveView from './DriveView.vue'
 import type { FileItem, FilePage } from '../types/files'
+import { loadPreview } from '../preview/previewContent'
+import * as previewContent from '../preview/previewContent'
+vi.mock('../preview/PdfCanvas.vue', () => ({ default: { props: ['fileId', 'url', 'title'], template: '<canvas data-testid="pdf-canvas" :data-url="url" />' } }))
 
 const folder: FileItem = { fileId: 'folderA', filePid: '0', fileName: '工作文档', folderType: 1, fileCategory: null, fileType: null, fileSize: null, status: 2, lastUpdateTime: '2026-10-04 10:30:00' }
 const report: FileItem = { fileId: 'report', filePid: '0', fileName: '季度报告.pdf', folderType: 0, fileCategory: 4, fileType: 4, fileSize: 1024, status: 2, lastUpdateTime: '2026-10-04 11:30:00' }
@@ -23,6 +26,15 @@ async function renderDrive(path = '/drive') {
 }
 
 describe('文件浏览与组织', () => {
+  it('点击普通文件打开预览，独立详情操作仍保留', async () => {
+    vi.spyOn(previewContent, 'loadPreview').mockResolvedValue({ mode: 'pdf', url: '/api/file/content/report', mime: 'application/pdf' })
+    const { wrapper } = await renderDrive()
+    await wrapper.findAll('.file-name-button')[1]!.trigger('click')
+    await flushPromises()
+    expect(loadPreview).toHaveBeenCalledWith(report, undefined, expect.any(AbortSignal))
+    expect(wrapper.get('[data-testid="pdf-canvas"]').attributes('data-url')).toBe('/api/file/content/report')
+    expect(wrapper.find('[aria-label="季度报告.pdf 的详情和操作"]').exists()).toBe(true)
+  })
   it('展示真实返回列表，在网格间切换并保存布局偏好', async () => {
     const { wrapper } = await renderDrive()
     expect(filesApi.list).toHaveBeenCalledWith(expect.objectContaining({ filePid: '0', category: 'all', pageNo: 1 }), expect.any(AbortSignal))

@@ -11,6 +11,7 @@ import ModalDialog from '../components/ModalDialog.vue'
 import FolderPicker from '../components/FolderPicker.vue'
 import FileCollection from '../components/FileCollection.vue'
 import { FILES_CHANGED_EVENT } from '../uploads/uploadQueue'
+import PreviewModal from '../preview/PreviewModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -45,6 +46,7 @@ const notice = ref('')
 const selectedIds = ref<string[]>([])
 const selectedFiles = computed(() => page.value.list.filter(file => selectedIds.value.includes(file.fileId)))
 const modal = ref<'create' | 'rename' | 'delete' | 'move' | 'detail' | null>(null)
+const previewFile = ref<FileItem | null>(null)
 const targets = ref<FileItem[]>([])
 const targetIds = computed(() => targets.value.map(file => file.fileId))
 const nameInput = ref('')
@@ -90,7 +92,7 @@ async function loadFiles() {
     if (currentRequest === requestId && !(reason instanceof Error && reason.name === 'AbortError')) error.value = errorMessage(reason)
   } finally { if (currentRequest === requestId) loading.value = false }
 }
-watch(() => route.fullPath, () => { searchInput.value = search.value; void loadFiles() }, { immediate: true })
+watch(() => route.fullPath, () => { previewFile.value = null; searchInput.value = search.value; void loadFiles() }, { immediate: true })
 function refreshAfterUpload() { void loadFiles() }
 window.addEventListener(FILES_CHANGED_EVENT, refreshAfterUpload)
 onBeforeUnmount(() => { requestId++; controller?.abort(); window.removeEventListener(FILES_CHANGED_EVENT, refreshAfterUpload) })
@@ -171,10 +173,11 @@ async function download(file: FileItem) {
       <div v-if="loading" class="files-state" role="status"><span class="loading-dot" /><h2>正在整理你的空间…</h2><p>读取文件列表</p></div>
       <div v-else-if="error" class="files-state"><AppIcon name="files" :size="36" /><h2>暂时无法显示文件</h2><p role="alert">{{ error }}</p><button class="secondary-button" @click="loadFiles">重新加载</button><button v-if="path || globalSearch" class="text-button" @click="visitCrumb(-1)">返回全部文件</button></div>
       <div v-else-if="!page.list.length" class="files-state empty-files"><span class="empty-folder-icon"><AppIcon :name="globalSearch ? 'search' : 'folder'" :size="40" /></span><p class="eyebrow">A LITTLE ROOM FOR WHAT’S NEXT</p><h2>{{ globalSearch ? '没有找到匹配的文件' : '这里，等着新的开始' }}</h2><p>{{ globalSearch ? '试试其他名称或分类。' : '从一个文件夹开始，让重要的事物井井有条。' }}</p><button v-if="!globalSearch" class="text-link" @click="openModal('create')">创建第一个文件夹<AppIcon name="arrow" :size="17" /></button><button v-else class="text-link" @click="visitCrumb(-1)">查看全部文件<AppIcon name="arrow" :size="17" /></button></div>
-      <FileCollection v-else :items="page.list" :selected="selectedIds" :layout="layout" @select="toggleFile" @select-all="selectedIds = $event" @open="$event.folderType === 1 ? openFolder($event) : openModal('detail', [$event])" @detail="openModal('detail', [$event])" />
+      <FileCollection v-else :items="page.list" :selected="selectedIds" :layout="layout" @select="toggleFile" @select-all="selectedIds = $event" @open="$event.folderType === 1 ? openFolder($event) : previewFile = $event" @detail="openModal('detail', [$event])" />
       <div v-if="!loading && !error" class="file-pagination"><span>共 {{ page.totalCount }} 项<span v-if="selectedIds.length"> · 已选 {{ selectedIds.length }} 项</span></span><div><label for="page-size">每页</label><select id="page-size" :value="pageSize" @change="navigate({ size: ($event.target as HTMLSelectElement).value, page: undefined })"><option :value="20">20</option><option :value="50">50</option><option :value="100">100</option></select><button class="icon-button" aria-label="上一页" :disabled="page.pageNo <= 1" @click="navigate({ page: page.pageNo - 1 })">‹</button><span>{{ page.pageNo }} / {{ Math.max(1, page.pageTotal) }}</span><button class="icon-button" aria-label="下一页" :disabled="page.pageNo >= page.pageTotal" @click="navigate({ page: page.pageNo + 1 })">›</button></div></div>
     </section>
-    <p class="drive-footnote">{{ globalSearch ? '分类与搜索会查找所有目录中的文件。' : '文件夹优先排列。在线预览将在后续版本开放。' }}</p>
+    <p class="drive-footnote">{{ globalSearch ? '分类与搜索会查找所有目录中的文件。' : '点击文件打开预览；不支持的格式可下载后查看。' }}</p>
+    <PreviewModal v-if="previewFile" :file="previewFile" @close="previewFile = null" />
     <ModalDialog v-if="modal" :key="modal" :title="dialogTitle" :busy="busy || downloading" @close="modal = null">
       <form v-if="modal === 'create' || modal === 'rename'" id="name-form" @submit.prevent="performAction"><div class="form-field"><label for="file-name">{{ modal === 'create' ? '文件夹名称' : '完整名称' }}</label><input id="file-name" v-model="nameInput" :disabled="busy" maxlength="200" autocomplete="off" :placeholder="modal === 'create' ? '给新文件夹起个名字' : ''" /><p v-if="modal === 'rename' && targets[0]?.folderType === 0" class="field-hint">请保留需要的扩展名。重命名不会转换文件格式。</p></div></form>
       <template v-else-if="modal === 'delete'"><p class="dialog-description">将 {{ targets.length }} 项移入回收站？文件会保留在回收站中，此操作不会立即永久删除。</p><ul class="target-list"><li v-for="file in targets.slice(0, 5)" :key="file.fileId"><AppIcon :name="fileIcon(file)" :size="17" /><span>{{ file.fileName }}</span></li><li v-if="targets.length > 5">以及另外 {{ targets.length - 5 }} 项</li></ul><p class="field-hint">回收站恢复入口将在后续版本开放。</p></template>

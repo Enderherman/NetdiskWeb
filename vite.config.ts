@@ -7,8 +7,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [vue()],
     // Worker 首次启动前预构建摘要依赖，避免首传时依赖发现触发整页刷新。
-    optimizeDeps: { include: ['hash-wasm'] },
+    optimizeDeps: { include: ['hash-wasm', 'pdfjs-dist'] },
     server: {
+      watch: { ignored: ['**/.local/**'] },
       proxy: {
         '/api': { target: env.API_PROXY_TARGET || 'http://127.0.0.1:7090', changeOrigin: false },
       },
