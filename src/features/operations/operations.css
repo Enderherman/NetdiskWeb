@@ -1,0 +1,6 @@
+.file-operations { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.file-operations > button { display: inline-flex; align-items: center; gap: 7px; background: transparent; color: var(--ink); font-size: 12px; padding: 7px 2px; }
+.operations-targets { margin: 18px 0; padding-left: 21px; color: var(--ink); font-size: 13px; line-height: 1.9; overflow-wrap: anywhere; }
+.operations-targets span { color: var(--muted); margin-left: 5px; font-size: 12px; }
+.operations-note, .operations-destination { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 17px 0; }
+.operations-destination { color: var(--ink); }

@@ -124,7 +124,7 @@ describe('文件浏览与组织', () => {
     await wrapper.get('.modal-footer .primary-button').trigger('click')
     await flushPromises()
     expect(recycle).toHaveBeenCalledWith(['folderA', 'report'])
-    expect(wrapper.find('.selection-toolbar').exists()).toBe(false)
+    expect(wrapper.find('.selection-toolbar').isVisible()).toBe(false)
     expect(wrapper.get('.empty-files').text()).toContain('这里，等着新的开始')
   })
 
