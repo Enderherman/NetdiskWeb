@@ -2,7 +2,7 @@ import { baseUrl, postForm, request } from './client'
 import type { LoginFields, RegisterFields, ResetPasswordFields, SessionUser, UserSpace } from '../types/account'
 
 export const accountApi = {
-  capabilities: () => request<{ emailVerificationEnabled: boolean; qqLoginEnabled: boolean }>('/accountCapabilities'),
+  capabilities: (signal?: AbortSignal) => request<{ emailVerificationEnabled: boolean; qqLoginEnabled: boolean }>('/accountCapabilities', { signal }),
   current: () => request<SessionUser>('/getUserInfo'),
   space: () => request<UserSpace>('/getUseSpace'),
   login: (fields: LoginFields) => postForm<SessionUser>('/login', { ...fields }),

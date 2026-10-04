@@ -28,6 +28,16 @@ async function renderAuth(path = '/auth/login') {
 }
 
 describe('账号表单', () => {
+  it('能力读取失败不冒充QQ关闭，重试后按真实能力显示入口', async () => {
+    vi.mocked(accountApi.capabilities).mockRejectedValueOnce(new ApiError('网络不可用', 0))
+      .mockResolvedValueOnce({ emailVerificationEnabled: true, qqLoginEnabled: true })
+    const { wrapper } = await renderAuth()
+    expect(wrapper.text()).toContain('暂时无法读取其他登录方式')
+    expect(wrapper.text()).not.toContain('QQ 登录暂未开放')
+    await wrapper.get('.qq-login button').trigger('click'); await flushPromises()
+    expect(wrapper.get('.qq-login button').text()).toBe('使用 QQ 登录')
+    expect(wrapper.text()).not.toContain('暂时无法读取其他登录方式')
+  })
   it('QQ未配置不提供假登录按钮，固定回调分类显示中文原因', async () => {
     const start = vi.spyOn(qqApi, 'start')
     const { wrapper } = await renderAuth('/auth/login?qqError=expired')

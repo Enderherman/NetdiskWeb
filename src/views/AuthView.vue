@@ -31,6 +31,9 @@ const qqCallbackError = computed(() => qqErrorMessage(route.query.qqError))
 let qqGeneration = 0
 let qqController: AbortController | undefined
 const capabilityError = ref('')
+const capabilitiesLoading = ref(false)
+let capabilityGeneration = 0
+let capabilityController: AbortController | undefined
 const captcha = ref<InstanceType<typeof CaptchaInput>>()
 const emailCaptcha = ref<InstanceType<typeof CaptchaInput>>()
 let cooldownTimer: ReturnType<typeof setInterval> | undefined
@@ -41,11 +44,22 @@ watch(mode, () => {
   Object.assign(fields, { password: '', confirmPassword: '', checkCode: '', emailCode: '' })
   error.value = ''; notice.value = ''; emailChallenge.value = false; sendError.value = ''
 })
-onBeforeUnmount(() => { clearInterval(cooldownTimer); qqGeneration++; qqController?.abort() })
-onMounted(async () => {
-  try { const capabilities = await accountApi.capabilities(); emailEnabled.value = capabilities.emailVerificationEnabled; qqEnabled.value = capabilities.qqLoginEnabled === true }
-  catch (reason) { capabilityError.value = errorMessage(reason); qqEnabled.value = false }
-})
+onBeforeUnmount(() => { clearInterval(cooldownTimer); qqGeneration++; qqController?.abort(); capabilityGeneration++; capabilityController?.abort() })
+async function loadCapabilities() {
+  if (capabilitiesLoading.value) return
+  const generation = ++capabilityGeneration
+  capabilityController = new AbortController()
+  capabilitiesLoading.value = true; capabilityError.value = ''; qqEnabled.value = null
+  try {
+    const capabilities = await accountApi.capabilities(capabilityController.signal)
+    if (generation !== capabilityGeneration) return
+    emailEnabled.value = capabilities.emailVerificationEnabled
+    qqEnabled.value = capabilities.qqLoginEnabled === true
+  } catch (reason) {
+    if (generation === capabilityGeneration) capabilityError.value = errorMessage(reason)
+  } finally { if (generation === capabilityGeneration) capabilitiesLoading.value = false }
+}
+onMounted(loadCapabilities)
 
 async function startQq() {
   if (!qqEnabled.value || busy.value || sending.value || qqStarting.value) return
@@ -149,7 +163,7 @@ async function submit() {
           <p v-if="error" class="form-error" role="alert">{{ error }}</p><p v-if="notice" class="form-notice success" role="status">{{ notice }}</p>
           <button class="primary-button auth-submit" type="submit" :disabled="busy || sending || (mode !== 'login' && emailEnabled === false)"><span v-if="busy" class="loading-dot" />{{ busy ? '正在处理…' : mode === 'register' ? '创建账号' : mode === 'reset' ? '更新密码' : '登录' }}<AppIcon v-if="!busy" name="arrow" :size="17" /></button>
         </form>
-        <div v-if="mode === 'login'" class="qq-login"><button v-if="qqEnabled" class="secondary-button" type="button" :disabled="busy || sending" @click="startQq">{{ qqStarting ? '正在跳转 QQ…' : '使用 QQ 登录' }}</button><p v-else-if="qqEnabled === false" class="field-hint">QQ 登录暂未开放</p></div>
+        <div v-if="mode === 'login'" class="qq-login"><p v-if="capabilitiesLoading" class="field-hint" role="status">正在读取登录方式…</p><template v-else-if="capabilityError"><p class="field-hint" role="status">暂时无法读取其他登录方式，请重试。</p><button class="secondary-button" type="button" :disabled="busy" @click="loadCapabilities">重新读取登录方式</button></template><button v-else-if="qqEnabled" class="secondary-button" type="button" :disabled="busy || sending" @click="startQq">{{ qqStarting ? '正在跳转 QQ…' : '使用 QQ 登录' }}</button><p v-else-if="qqEnabled === false" class="field-hint">QQ 登录暂未开放</p></div>
         <p class="auth-switch" v-if="mode === 'login'">还没有账号？<RouterLink to="/auth/register">创建账号<AppIcon name="arrow" :size="14" /></RouterLink></p><p class="auth-switch" v-else>已有账号？<RouterLink to="/auth/login">返回登录<AppIcon name="arrow" :size="14" /></RouterLink></p>
       </section>
     </main>
