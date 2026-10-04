@@ -1,0 +1,75 @@
+name: Frontend Docker image verification
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build static application image
+        run: docker build --pull --tag netdisk-web:ci .
+      - name: Validate actual Nginx configuration
+        run: docker run --rm --network none --add-host backend:127.0.0.1 --entrypoint nginx netdisk-web:ci -t
+      - name: Verify Worker MIME, SPA, and callback log redaction
+        run: |
+          container=netdisk-web-runtime-ci
+          trap 'docker rm -f -v "$container" >/dev/null 2>&1 || true' EXIT
+          docker create --name "$container" --network none --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m,mode=1777 \
+            --add-host backend:127.0.0.1 --entrypoint sh netdisk-web:ci -ec '
+            test "$(id -u)" != 0
+            nginx
+            trap "nginx -s quit >/dev/null 2>&1 || true" EXIT
+            wget -q -T 5 -O - http://127.0.0.1:8080/healthz | grep -qx ok
+            worker=""
+            for candidate in /usr/share/nginx/html/assets/*.mjs; do
+              if [ -f "$candidate" ]; then worker="$candidate"; break; fi
+            done
+            test -n "$worker"
+            asset="${worker##*/}"
+            wget -S -T 5 -O /dev/null "http://127.0.0.1:8080/assets/$asset" 2>/tmp/worker-headers
+            grep -qi "Content-Type: application/javascript" /tmp/worker-headers
+            wget -q -T 5 -O /tmp/route.html http://127.0.0.1:8080/auth/login
+            cmp /tmp/route.html /usr/share/nginx/html/index.html
+            if wget -q -T 5 -O /dev/null http://127.0.0.1:8080/assets/not-present.mjs; then
+              echo "Missing static asset unexpectedly returned success" >&2
+              exit 1
+            fi
+            wget -q -T 5 --header "Referer: https://example.invalid/?token=FAKE_REFERER_SECRET" \
+              -O /tmp/safe.html "http://127.0.0.1:8080/index.html?probe=FAKE_QUERY_SECRET"
+            if wget -S -T 10 -O /dev/null \
+              "http://127.0.0.1:8080/api/qqlogin/callback?code=FAKE_CODE_SECRET&state=FAKE_STATE_SECRET" \
+              2>/tmp/callback-headers; then
+              echo "Callback unexpectedly reached a backend in the network-free test" >&2
+              exit 1
+            fi
+            grep -q "HTTP/1.1 502" /tmp/callback-headers
+            if wget -S -T 10 -O /dev/null \
+              "http://127.0.0.1:8080/api/file/download/FAKE_DOWNLOAD_SECRET" \
+              2>/tmp/download-headers; then
+              echo "Download unexpectedly reached a backend in the network-free test" >&2
+              exit 1
+            fi
+            grep -q "HTTP/1.1 502" /tmp/download-headers
+          '
+          docker start "$container" >/dev/null
+          result=$(docker wait "$container")
+          docker logs "$container" > /tmp/netdisk-nginx-ci.log 2>&1
+          if test "$result" != 0; then cat /tmp/netdisk-nginx-ci.log; exit 1; fi
+          if grep -Eq 'FAKE_CODE_SECRET|FAKE_STATE_SECRET|FAKE_QUERY_SECRET|FAKE_REFERER_SECRET|FAKE_DOWNLOAD_SECRET' /tmp/netdisk-nginx-ci.log; then
+            echo "Sensitive query/referrer values leaked into container stdout/stderr" >&2
+            exit 1
+          fi
+          grep -q '"method":"GET","uri":"/index.html","status":200' /tmp/netdisk-nginx-ci.log
+          grep -Fq '"uri":"/api/file/download/[redacted]","status":502' /tmp/netdisk-nginx-ci.log
+          if grep -q '/api/qqlogin/callback' /tmp/netdisk-nginx-ci.log; then
+            echo "Sensitive callback unexpectedly appeared in access/error logs" >&2
+            exit 1
+          fi

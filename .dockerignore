@@ -1,0 +1,15 @@
+# Allowlist only build inputs. Credentials, snapshots, docs and Git stay outside.
+**
+!Dockerfile
+!.dockerignore
+!package.json
+!package-lock.json
+!index.html
+!tsconfig*.json
+!vite.config.ts
+!public/
+!public/**
+!src/
+!src/**
+!nginx/
+!nginx/**
