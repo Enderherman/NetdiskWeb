@@ -6,6 +6,7 @@ import UploadView from '../views/UploadView.vue'
 import ShareManageView from '../features/shares/ShareManageView.vue'
 import PublicShareView from '../features/shares/PublicShareView.vue'
 import RecycleView from '../features/recycle/RecycleView.vue'
+import SettingsView from '../features/settings/SettingsView.vue'
 import { installAuthGuard } from './guards'
 
 export const routes = [
@@ -17,6 +18,7 @@ export const routes = [
   { path: '/uploads', component: UploadView, meta: { title: '上传管理' } },
   { path: '/shares', component: ShareManageView, meta: { title: '我的分享' } },
   { path: '/recycle', component: RecycleView, meta: { title: '回收站' } },
+  { path: '/settings', component: SettingsView, meta: { title: '个人设置' } },
   { path: '/s/:shareId', component: PublicShareView, meta: { title: '文件分享', public: true } },
   { path: '/appearance', component: AppearanceView, meta: { title: '外观设置' } },
   { path: '/:pathMatch(.*)*', redirect: '/drive' },

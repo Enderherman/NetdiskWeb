@@ -1,0 +1,16 @@
+.account-settings-view { max-width: 1040px; }
+.settings-block { display: grid; grid-template-columns: minmax(200px, .85fr) minmax(250px, 1fr); gap: 48px; padding: 32px 0; border-top: 1px solid var(--line); }
+.settings-explanation h2 { font-size: 17px; font-weight: 550; }
+.settings-explanation > p { color: var(--muted); font-size: 13px; line-height: 1.9; margin-top: 12px; max-width: 340px; }
+.settings-identity { display: grid; grid-template-columns: auto 1fr; gap: 12px 18px; font-size: 12px; margin-top: 25px; }
+.settings-identity dt { color: var(--muted); }
+.settings-identity dd { margin: 0; overflow-wrap: anywhere; }
+.settings-form { max-width: 430px; min-width: 0; }
+.settings-avatar-row { display: flex; gap: 22px; align-items: center; margin-bottom: 24px; }
+.settings-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: var(--surface); border: 1px solid var(--line); flex-shrink: 0; }
+.settings-file-label { display: inline-flex; cursor: pointer; align-items: center; gap: 8px; }
+.settings-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.settings-avatar-row:focus-within .settings-file-label { outline: 2px solid var(--accent); outline-offset: 3px; }
+.settings-avatar-row .field-hint { max-width: 265px; overflow-wrap: anywhere; }
+.settings-state { padding: 55px 20px; text-align: center; color: var(--muted); font-size: 14px; }
+@media (max-width: 800px) { .settings-block { gap: 25px; grid-template-columns: 1fr; } .settings-form { max-width: none; } .settings-explanation > p { max-width: none; } }
