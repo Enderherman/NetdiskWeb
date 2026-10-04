@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { uploadsApi } from '../api/uploads'
 import { filesApi } from '../api/files'
 import { errorMessage, formatBytes, useAccount } from '../composables/account'
 import { FILES_CHANGED_EVENT, uploadPercent, useUploadQueue } from '../uploads/uploadQueue'
+import { locateUploadedFile, uploadSearchLocation } from '../uploads/fileLocation'
+import type { UploadSearchLocation } from '../uploads/fileLocation'
 import type { LocalUploadTask, ServerUploadState, ServerUploadTask, UploadTaskPage } from '../types/uploads'
 import AppIcon from '../components/AppIcon.vue'
 import FolderPicker from '../components/FolderPicker.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 
 const route = useRoute()
+const router = useRouter()
 const account = useAccount()
 const queue = useUploadQueue()
 const picker = ref<HTMLInputElement>()
@@ -30,6 +33,11 @@ const resumeTarget = ref<ServerUploadTask | null>(null)
 const cancelTarget = ref<{ local?: LocalUploadTask; server?: ServerUploadTask } | null>(null)
 const cancelBusy = ref(false)
 const cancelError = ref('')
+const locating = ref(''), locationError = ref('')
+const locationFallback = ref<UploadSearchLocation | null>(null)
+let locationGeneration = 0
+let locator: AbortController | undefined
+let locationTimeout: ReturnType<typeof setTimeout> | undefined
 const localStates: Record<LocalUploadTask['state'], string> = { queued: '等待上传', hashing: '正在校验文件', uploading: '正在上传', paused: '已暂停', error: '需要处理', completed: '已完成', cancelled: '已取消', cancelling: '正在取消' }
 const serverStates: Record<ServerUploadState, string> = { uploading: '待完成', completed: '已完成', cancelled: '已取消', expired: '已过期' }
 const activeCount = computed(() => queue.tasks.filter(task => ['queued', 'hashing', 'uploading'].includes(task.state)).length)
@@ -114,24 +122,45 @@ async function confirmCancel() {
   finally { cancelBusy.value = false }
 }
 function time(value: number) { return new Date(value).toLocaleString('zh-CN', { hour12: false }) }
-function fileLocation(task: ServerUploadTask) {
-  if (task.navigationPath === '0') return { path: '/drive', query: { focus: task.fileId } }
-  if (task.navigationPath && /^[A-Za-z0-9]{1,10}(\/[A-Za-z0-9]{1,10})*$/.test(task.navigationPath)) {
-    return { path: '/drive', query: { path: task.navigationPath, focus: task.fileId } }
-  }
-  return { path: '/drive', query: { q: task.actualFileName || task.fileName } }
+function cancelLocation() {
+  locationGeneration++; locator?.abort(); clearTimeout(locationTimeout); locating.value = ''
+}
+async function viewFile(task: ServerUploadTask) {
+  if (locating.value) return
+  const owner = account.user.value?.userId
+  if (!owner) { locationError.value = '请登录后查看文件'; locationFallback.value = null; return }
+  const generation = ++locationGeneration
+  locator = new AbortController(); const signal = locator.signal
+  locating.value = task.fileId; locationError.value = ''; locationFallback.value = uploadSearchLocation(task)
+  locationTimeout = setTimeout(() => locator?.abort(), 30_000)
+  try {
+    const location = await locateUploadedFile(task, signal, latest => {
+      if (!disposed && generation === locationGeneration && account.user.value?.userId === owner) {
+        locationFallback.value = uploadSearchLocation(latest)
+        serverPage.value.list = serverPage.value.list.map(item => item.fileId === latest.fileId ? latest : item)
+      }
+    })
+    if (!disposed && generation === locationGeneration && !signal.aborted && account.user.value?.userId === owner) await router.push(location)
+  } catch (reason) {
+    if (!disposed && generation === locationGeneration && account.user.value?.userId === owner) {
+      locationError.value = signal.aborted ? '定位耗时较长，请重试或按名称搜索' : errorMessage(reason)
+    }
+  } finally { if (!disposed && generation === locationGeneration) { locating.value = ''; clearTimeout(locationTimeout) } }
 }
 function refreshed() { void loadServer(serverPage.value.pageNo) }
 onMounted(() => { void loadServer(); window.addEventListener(FILES_CHANGED_EVENT, refreshed) })
 watch(() => route.query.pid, resolveDestination, { immediate: true })
 watch(serverState, () => { void loadServer() })
-onBeforeUnmount(() => { disposed = true; requestGeneration++; destinationGeneration++; window.removeEventListener(FILES_CHANGED_EVENT, refreshed) })
+watch(() => account.user.value?.userId, () => { cancelLocation(); locationError.value = ''; locationFallback.value = null }, { flush: 'sync' })
+onBeforeUnmount(() => { disposed = true; requestGeneration++; destinationGeneration++; cancelLocation(); window.removeEventListener(FILES_CHANGED_EVENT, refreshed) })
 </script>
 
 <template>
   <section class="upload-view">
     <div class="page-heading"><div><p class="eyebrow">MAKE ROOM FOR MORE</p><h1>让文件，来到这里<span class="heading-period">.</span></h1><p class="page-description">慢慢传，也安心存。随时暂停，接着继续。</p></div><div class="upload-summary"><span class="quiet-dot" />{{ activeCount ? `${activeCount} 个任务进行中` : '准备好接收你的文件' }}</div></div>
     <p v-if="error" class="form-error" role="alert">{{ error }}</p><p v-if="notice" class="form-notice success" role="status">{{ notice }}</p>
+    <div v-if="locationError" class="form-error" role="alert">{{ locationError }} <RouterLink v-if="locationFallback" class="text-link" :to="locationFallback">按名称搜索</RouterLink></div>
+    <div v-if="locating" role="status">正在核对文件所在目录与分页… <button class="text-button" @click="cancelLocation">取消定位</button></div>
     <div class="upload-destination"><AppIcon name="folder" :size="18" /><span>保存到 <strong>{{ destination.name }}</strong></span><button class="text-button" @click="choosingDestination = true">更改位置</button></div>
     <div class="upload-dropzone" :class="{ dragging }" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="dropped"><span class="dropzone-icon"><AppIcon name="upload" :size="31" /></span><h2>把文件拖到这里</h2><p>或从设备中选择，支持一次上传多个文件。</p><button class="primary-button" :disabled="!destination.valid" @click="picker?.click()"><AppIcon name="plus" :size="17" />选择文件</button><input ref="picker" class="sr-only" type="file" multiple aria-label="选择上传文件" tabindex="-1" @change="selected" /><input ref="resumePicker" class="sr-only" type="file" aria-label="重新选择续传原文件" tabindex="-1" @change="resumeSelected" /></div>
     <section class="upload-section" aria-labelledby="local-upload-title"><div class="upload-section-heading"><h2 id="local-upload-title">本次上传 <span>{{ queue.tasks.length }}</span></h2><p>校验后逐个上传，切换页面仍会继续。</p></div><div v-if="!queue.tasks.length" class="upload-quiet-empty">这里会记录你本次选择的文件。</div><div v-else class="local-upload-list"><article v-for="task in queue.tasks" :key="task.localId" class="upload-task"><div class="upload-task-icon"><AppIcon name="files" :size="24" /></div><div class="upload-task-main"><div class="upload-task-title"><h3 :title="task.fileName">{{ task.fileName }}</h3><span :class="`task-status status-${task.state}`">{{ localStates[task.state] }}</span></div><p class="upload-task-meta">{{ formatBytes(task.fileSize) }} · {{ task.destinationName }}<span v-if="task.state === 'hashing'"> · 校验 {{ task.hashProgress }}%</span><span v-else-if="task.state === 'uploading'"> · {{ uploadPercent(task) }}%<span v-if="task.speed > 0"> · {{ formatBytes(task.speed) }}/秒</span></span><span v-else-if="task.uploadStatus === 'upload_seconds'"> · 秒传完成</span></p><div class="upload-progress" role="progressbar" :aria-label="`${task.fileName} 的${task.state === 'hashing' ? '校验' : '上传'}进度`" :aria-valuenow="task.state === 'hashing' ? task.hashProgress : uploadPercent(task)" aria-valuemin="0" aria-valuemax="100"><span :style="{ width: `${task.state === 'hashing' ? task.hashProgress : uploadPercent(task)}%` }" /></div><p v-if="task.error" class="upload-task-error" role="alert">{{ task.error }}</p></div><div class="upload-task-actions"><button v-if="['queued', 'hashing', 'uploading'].includes(task.state)" :aria-label="`暂停 ${task.fileName}`" @click="queue.pause(task.localId)">暂停</button><button v-if="['paused', 'error'].includes(task.state) && !task.uncertain" :aria-label="`继续 ${task.fileName}`" @click="queue.resume(task.localId)">{{ task.state === 'error' ? '重试' : '继续' }}</button><button v-if="task.uncertain" @click="loadServer()">查服务器任务</button><button v-if="!['completed', 'cancelled'].includes(task.state)" :disabled="task.state === 'cancelling'" :aria-label="`取消 ${task.fileName}`" @click="cancelError = ''; cancelTarget = { local: task }">取消</button></div></article></div></section>
@@ -152,7 +181,7 @@ onBeforeUnmount(() => { disposed = true; requestGeneration++; destinationGenerat
           </div>
           <div class="server-task-actions">
             <template v-if="task.state === 'uploading'"><button class="secondary-button" @click="selectResume(task)">选择原文件继续</button><button class="text-button" @click="cancelError = ''; cancelTarget = { server: task }">取消任务</button></template>
-            <RouterLink v-else-if="task.state === 'completed' && task.fileAvailable" class="text-link" :to="fileLocation(task)">查看文件<AppIcon name="arrow" :size="14" /></RouterLink>
+            <button v-else-if="task.state === 'completed' && task.fileAvailable" class="text-link" :disabled="Boolean(locating)" @click="viewFile(task)">{{ locating === task.fileId ? '正在定位…' : '查看文件' }}<AppIcon name="arrow" :size="14" /></button>
           </div>
         </article>
       </div>
