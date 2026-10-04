@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
     plugins: [vue()],
     server: {
       proxy: {
-        '/api': { target: env.API_PROXY_TARGET || 'http://127.0.0.1:7090', changeOrigin: true },
+        '/api': { target: env.API_PROXY_TARGET || 'http://127.0.0.1:7090', changeOrigin: false },
       },
     },
     test: { environment: 'jsdom', setupFiles: ['./src/test/setup.ts'], clearMocks: true },

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import AppIcon from './AppIcon.vue'
 import ThemeSwitcher from './ThemeSwitcher.vue'
+import { formatBytes, useAccount } from '../composables/account'
+import { version } from '../../package.json'
+const account = useAccount()
 defineEmits<{ navigate: [] }>()
 </script>
 
@@ -14,10 +17,11 @@ defineEmits<{ navigate: [] }>()
     <button disabled title="回收站即将开放"><AppIcon name="trash" /><span>回收站</span></button>
   </nav>
   <div class="sidebar-spacer" />
-  <div class="storage-note"><span class="storage-icon"><AppIcon name="folder" :size="17" /></span><div><strong>为重要的事物留一处空间</strong><span>文件、灵感，以及更多。</span></div></div>
+  <div v-if="account.authenticated.value" class="storage-usage"><div class="storage-heading"><AppIcon name="folder" :size="16" /><strong>我的空间</strong><span v-if="account.space.value">{{ Math.round(account.spacePercent.value) }}%</span></div><template v-if="account.space.value"><div class="space-track" role="progressbar" aria-label="已使用存储空间" :aria-valuenow="Math.round(account.spacePercent.value)" aria-valuemin="0" aria-valuemax="100"><span :style="{ width: `${account.spacePercent.value}%` }" /></div><p>{{ formatBytes(account.space.value.useSpace) }} / {{ formatBytes(account.space.value.totalSpace) }}</p></template><p v-else>空间信息暂不可用 <button type="button" @click="account.refreshSpace">重试</button></p></div>
+  <div v-else class="storage-note"><span class="storage-icon"><AppIcon name="folder" :size="17" /></span><div><strong>为重要的事物留一处空间</strong><span>文件、灵感，以及更多。</span></div></div>
   <div class="sidebar-footer">
     <RouterLink class="appearance-link" to="/appearance" @click="$emit('navigate')"><AppIcon name="settings" :size="19" /><span>外观设置</span><AppIcon name="chevron" :size="14" /></RouterLink>
     <ThemeSwitcher />
-    <p class="version-label">NETDISK <span>v0.1.0</span></p>
+    <p class="version-label">NETDISK <span>v{{ version }}</span></p>
   </div>
 </template>

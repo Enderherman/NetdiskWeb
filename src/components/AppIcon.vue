@@ -18,6 +18,7 @@ const paths: Record<string, string> = {
   arrow: 'M5 12h14m-5-5 5 5-5 5',
   grid: 'M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z',
   check: 'm5 12 4 4L19 6',
+  logout: 'M10 4H4v16h6M9 12h12m-4-4 4 4-4 4',
 }
 </script>
 

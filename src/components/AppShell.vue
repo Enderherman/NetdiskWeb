@@ -3,6 +3,7 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppIcon from './AppIcon.vue'
 import SidebarContent from './SidebarContent.vue'
+import AccountBadge from './AccountBadge.vue'
 
 const route = useRoute()
 const menuOpen = ref(false)
@@ -46,7 +47,7 @@ onBeforeUnmount(() => { if (menuOpen.value) document.body.style.overflow = previ
       <header class="topbar">
         <button ref="menuButton" class="icon-button mobile-menu" aria-label="打开导航" aria-controls="mobile-navigation" :aria-expanded="menuOpen" @click="menuOpen = true"><AppIcon name="menu" /></button>
         <div class="breadcrumb"><span>个人空间</span><AppIcon name="chevron" :size="12" /><strong>{{ route.meta.title }}</strong></div>
-        <div class="topbar-right"><span class="preview-label">预览版</span><span class="quiet-dot" /></div>
+        <div class="topbar-right"><AccountBadge /></div>
       </header>
       <main id="main-content" tabindex="-1"><slot /></main>
       <footer class="workspace-footer"><span>属于你的空间，自在有序。</span><span>Netdisk</span></footer>
