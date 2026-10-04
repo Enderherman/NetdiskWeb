@@ -11,6 +11,7 @@ import AdminUsersView from '../features/admin/AdminUsersView.vue'
 import AdminFilesView from '../features/admin/AdminFilesView.vue'
 import AdminSystemView from '../features/admin/AdminSystemView.vue'
 import AdminAccessNotice from '../features/admin/AdminAccessNotice.vue'
+import RecentView from '../features/recent/RecentView.vue'
 import { installAuthGuard } from './guards'
 
 export const routes = [
@@ -19,6 +20,7 @@ export const routes = [
   { path: '/auth/register', component: AuthView, meta: { title: '创建账号', public: true } },
   { path: '/auth/reset', component: AuthView, meta: { title: '找回密码', public: true } },
   { path: '/drive', component: DriveView, meta: { title: '我的文件' } },
+  { path: '/recent', component: RecentView, meta: { title: '最近文件' } },
   { path: '/uploads', component: UploadView, meta: { title: '上传管理' } },
   { path: '/shares', component: ShareManageView, meta: { title: '我的分享' } },
   { path: '/recycle', component: RecycleView, meta: { title: '回收站' } },

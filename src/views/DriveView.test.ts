@@ -26,6 +26,13 @@ async function renderDrive(path = '/drive') {
 }
 
 describe('文件浏览与组织', () => {
+  it('定位参数在真实列表就绪后选中目标并放置键盘焦点', async () => {
+    const { wrapper } = await renderDrive('/drive?focus=report')
+    await flushPromises()
+    expect((wrapper.get('[aria-label="选择 季度报告.pdf"]').element as HTMLInputElement).checked).toBe(true)
+    expect(document.activeElement?.textContent).toContain('季度报告.pdf')
+    expect(wrapper.get('.selection-toolbar').isVisible()).toBe(true)
+  })
   it('点击普通文件打开预览，独立详情操作仍保留', async () => {
     vi.spyOn(previewContent, 'loadPreview').mockResolvedValue({ mode: 'pdf', url: '/api/file/content/report', mime: 'application/pdf' })
     const { wrapper } = await renderDrive()

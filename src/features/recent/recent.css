@@ -1,0 +1,23 @@
+.recent-view { max-width: 1240px; }
+.recent-state { min-height: 330px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 17px; padding: 36px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+.recent-state h2 { font-size: 19px; font-weight: 550; color: var(--ink); }
+.recent-table-wrap { overflow-x: auto; }
+.recent-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+.recent-table th { position: relative; padding: 15px 22px; color: var(--muted); font-weight: 500; background: var(--surface); white-space: nowrap; }
+.recent-table td { padding: 17px 22px; border-top: 1px solid var(--line); white-space: nowrap; }
+.recent-name { display: flex; align-items: center; gap: 15px; background: transparent; text-align: left; color: var(--ink); min-width: 0; }
+.recent-name svg { color: var(--muted); flex-shrink: 0; }
+.recent-name strong { display: block; max-width: 450px; overflow: hidden; text-overflow: ellipsis; font-weight: 550; font-size: 13px; }
+.recent-name small { display: block; margin-top: 6px; color: var(--muted); font-size: 11px; }
+.recent-location-button { display: inline-flex; align-items: center; gap: 7px; background: transparent; font-size: 12px; color: var(--muted); }
+.recent-location-button:hover { color: var(--ink); }
+.recent-note { color: var(--muted); font-size: 12px; line-height: 1.8; margin-top: 19px; }
+.recent-locating { display: flex; gap: 10px; align-items: center; padding: 14px; background: var(--surface); border-radius: 9px; font-size: 12px; color: var(--muted); margin-bottom: 17px; }
+.recent-locating button { margin-left: auto; }
+@media (max-width: 700px) {
+  .recent-table th, .recent-table td { padding: 13px 15px; }
+  .recent-name { gap: 10px; }
+  .recent-name strong { max-width: min(47vw, 220px); }
+  .recent-table th:nth-child(3), .recent-table td:nth-child(3),
+  .recent-table th:nth-child(4), .recent-table td:nth-child(4) { display: none; }
+}
