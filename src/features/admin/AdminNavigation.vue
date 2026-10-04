@@ -1,0 +1,1 @@
+<template><nav class="admin-navigation" aria-label="管理导航"><RouterLink to="/admin/users">用户管理</RouterLink><RouterLink to="/admin/files">文件管理</RouterLink><RouterLink to="/admin/system">系统设置</RouterLink></nav></template>

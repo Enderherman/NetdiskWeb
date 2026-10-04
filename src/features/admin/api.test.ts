@@ -1,0 +1,60 @@
+import { describe, expect, it, vi } from 'vitest'
+import { adminApi, adminContentUrl, adminDownloadUrl, quotaError, systemError } from './api'
+import { fileRecord, page, systemSettings, userRecord } from './__tests__/fixtures'
+
+describe('管理接口与白名单', () => {
+  it('用户请求只带公开筛选条件，并丢弃多余敏感返回字段', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 200, data: page([{ ...userRecord, password: 'never expose', sessionVersion: 3 }]) })))
+    const result = await adminApi.users({ pageNo: 2, pageSize: 20, userId: 'alice', nickNameFuzzy: '中文', emailFuzzy: 'example', status: 1, password: 'discard' } as Parameters<typeof adminApi.users>[0])
+    const url = new URL(String(fetchMock.mock.calls[0]![0]), 'http://localhost')
+    expect(Object.fromEntries(url.searchParams)).toEqual({ pageNo: '2', pageSize: '20', userId: 'alice', nickNameFuzzy: '中文', emailFuzzy: 'example', status: '1' })
+    expect(result.list[0]).not.toHaveProperty('password'); expect(result.list[0]).not.toHaveProperty('sessionVersion')
+  })
+  it('文件请求强制所有者，既不请求也不保留物理路径和摘要', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 200, data: page([{ ...fileRecord, filePath: '/private', fileMd5: 'secret' }]) })))
+    const result = await adminApi.files({ userId: 'alice', pageNo: 1, pageSize: 20, filePid: '0', delFlag: 2, filePath: 'discard' } as Parameters<typeof adminApi.files>[0])
+    expect(result.list[0]).not.toHaveProperty('filePath'); expect(result.list[0]).not.toHaveProperty('fileMd5')
+    expect(String(fetchMock.mock.calls[0]![0])).not.toContain('filePath')
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code: 200, data: page([{ ...fileRecord, userId: 'bob' }]) })))
+    await expect(adminApi.files({ userId: 'alice', pageNo: 1, pageSize: 20 })).rejects.toThrow('所属用户')
+    await expect(adminApi.files({ userId: '', pageNo: 1, pageSize: 20 })).rejects.toThrow('先选择')
+  })
+  it('状态、配额与永久删除均POST，历史组合字段使用fileId_userId', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ code: 200, data: null })))
+    await adminApi.changeStatus('alice', 0); await adminApi.changeSpace('alice', -100); await adminApi.deleteFiles([fileRecord, { fileId: 'other', userId: 'bob' }])
+    expect(fetchMock.mock.calls.every(call => call[1]?.method === 'POST' && call[1]?.credentials === 'include')).toBe(true)
+    expect(Object.fromEntries((fetchMock.mock.calls[1]![1]!.body as URLSearchParams).entries())).toEqual({ userId: 'alice', changeSpace: '-100' })
+    expect((fetchMock.mock.calls[2]![1]!.body as URLSearchParams).get('fileIdAndUserIds')).toBe('report_alice,other_bob')
+  })
+  it('下载签发只接受有效短码，内容URL安全编码', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ code: 200, data: 'A'.repeat(50) })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 200, data: null })))
+    expect(await adminApi.downloadCode('alice', 'report')).toHaveLength(50)
+    expect(fetchMock.mock.calls[0]![0]).toBe('/api/admin/createDownloadUrl/alice/report')
+    expect(fetchMock.mock.calls[0]![1]!.method).toBe('POST')
+    await expect(adminApi.downloadCode('alice', 'report')).rejects.toThrow('下载链接响应异常')
+    expect(adminContentUrl('a/b', 'c/d')).toBe('/api/admin/content/a%2Fb/c%2Fd')
+    expect(adminDownloadUrl('a/b')).toBe('/api/admin/download/a%2Fb')
+  })
+  it('系统设置只提交真实契约字段，缺失响应不填默认值', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ code: 200, data: systemSettings })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 200, data: null })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: 200, data: null })))
+    expect(await adminApi.system()).toEqual(systemSettings)
+    await adminApi.saveSystem(systemSettings)
+    expect(Object.fromEntries((fetchMock.mock.calls[1]![1]!.body as URLSearchParams).entries())).toEqual({ ...systemSettings, userInitUseSpace: '2048' })
+    await expect(adminApi.system()).rejects.toThrow('系统设置响应异常')
+  })
+  it('配额整数、已用下限、模板%s与长度边界校验', () => {
+    expect(quotaError(userRecord, '90', 'subtract')).toContain('已用空间')
+    expect(quotaError(userRecord, '0', 'add')).toContain('整数')
+    expect(quotaError(userRecord, '1.5', 'add')).toContain('整数')
+    expect(quotaError(userRecord, '50', 'subtract')).toBe('')
+    expect(systemError({ ...systemSettings, registerEmailContent: '验证码 %S' })).toContain('%s')
+    expect(systemError({ ...systemSettings, registerEmailContent: '%s'.repeat(2500), userInitUseSpace: 1_048_576 })).toBe('')
+    expect(systemError({ ...systemSettings, registerEmailContent: '%s'.repeat(2501) })).toContain('5000')
+    expect(systemError({ ...systemSettings, registerEmailTitle: 'x'.repeat(151) })).toContain('150')
+    expect(systemError({ ...systemSettings, userInitUseSpace: 0 })).toContain('1–1048576')
+    expect(systemError({ ...systemSettings, userInitUseSpace: 1 })).toBe('')
+  })
+})
