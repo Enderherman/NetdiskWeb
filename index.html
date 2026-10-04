@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f9f9f9" />
+    <meta name="description" content="Netdisk，你的个人云端空间。" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Netdisk · 我的云端空间</title>
+    <script>
+      // 首次绘制前恢复主题，避免深色偏好下闪白；隐私模式禁用存储时回退系统。
+      try {
+        var p = localStorage.getItem('netdisk.theme');
+        var dark = p === 'dark' || (p !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      } catch (_) {
+        var fallback = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = fallback;
+        document.documentElement.style.colorScheme = fallback;
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
