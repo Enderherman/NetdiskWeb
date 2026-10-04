@@ -1,0 +1,12 @@
+.upload-selection-actions { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.upload-selection-actions .primary-button { margin-top: 0; }
+.upload-dropzone .folder-upload-hint { font-size: 10px; color: var(--subtle); max-width: 560px; margin-top: 3px; }
+.folder-preparation { margin-top: 20px; border: 1px solid var(--line); border-radius: 11px; padding: 18px 20px; background: var(--sidebar); }
+.folder-preparation-heading { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 12px; }
+.folder-preparation-heading h2 { font-size: 13px; font-weight: 550; margin: 0; }
+.folder-preparation-heading button { font-size: 11px; white-space: nowrap; }
+.folder-preparation > p { font-size: 11px; color: var(--muted); line-height: 1.9; margin-top: 6px; overflow-wrap: anywhere; }
+.folder-preparation > [role="alert"] { color: #bf643b; }
+.folder-preparation .folder-preparation-note { font-size: 10px; color: var(--subtle); margin-top: 12px; }
+.folder-preparation .folder-current-path { font-family: Consolas, monospace; }
+@media (max-width: 600px) { .folder-preparation { padding: 15px; } .folder-preparation-heading { gap: 10px; } }
