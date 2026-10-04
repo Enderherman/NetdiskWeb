@@ -13,7 +13,7 @@
 ## 根应用接线
 
 1. 在 `router/index.ts` 注册 `/shares`（`ShareManageView`，受保护，标题“我的分享”）与 `/s/:shareId`（`PublicShareView`，`meta: { public: true, title: '文件分享' }`）。公共路由不需要 `props: true`，但兼容传入 prop。
-2. 必须修正当前 `guards.ts` 对 `meta.public` 的处理。现有逻辑会把所有已登录用户从公共页面重定向走；只有 `/auth/*` 登录/注册/找回页应在已经登录时跳转。`/s/:shareId` 必须同时允许已登录用户与游客访问。例如，在 public 分支中仅当 `authenticated && to.path.startsWith('/auth/')` 时执行原登录后跳转，其余 public 页面直接返回 `true`。
+2. `guards.ts` 已区分公共分享与认证入口：只有 `/auth/*` 登录/注册/找回页在已登录时跳转，`/s/:shareId` 同时允许已登录用户与游客访问。后续修改应保留这一规则，避免将所有 `meta.public` 页面都重定向走。
 3. `App.vue` 已对 `meta.public` 使用无侧栏的 `RouterView`，并在公共页收到 901 事件时只清除账户状态而不自动跳走；保留此行为，让公共页显示登录提示。公共页仍需处于 App 的主题 provider 和 Vue Router 环境下。
 4. 侧栏增加 `/shares` 链接；文件列表/详情只在单选且 `status === 2` 时显示“分享”操作，给 `ShareCreateDialog` 传入真实 `FileItem`。`close` 清除目标，`created` 可刷新分享计数/提示，但保留结果界面以便复制链接。
 5. 部署的前端服务器需将 `/s/**` 等 SPA 路径回退至 `index.html`；`/api` 继续代理到后端。分享链接基于当前前端页面的 origin 生成，不把 API 地址当作网页地址。

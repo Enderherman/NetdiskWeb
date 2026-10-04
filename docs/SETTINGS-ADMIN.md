@@ -1,19 +1,19 @@
 # 个人设置与管理模块
 
-模块只添加 `src/features/settings` 和 `src/features/admin` 下的页面、接口适配和测试，不修改全局路由、布局、侧栏、主题或依赖。所有数据由真实后端读取，未提供的邮箱和用量不会补造。
+`src/features/settings` 和 `src/features/admin` 包含个人设置与管理页面、接口适配和测试，已接入全局路由、侧栏、账户栏与现有主题。所有数据由真实后端读取，未提供的邮箱和用量不会补造。
 
 ## 接线路由
 
-| 建议路径 | 页面 | 路由元数据 |
+| 当前路径 | 页面 | 路由元数据 |
 | --- | --- | --- |
 | `/settings` | `features/settings/SettingsView.vue` | `title: '个人设置'`，要求登录。 |
 | `/admin/users` | `features/admin/AdminUsersView.vue` | `title: '用户管理', admin: true`。 |
 | `/admin/files` | `features/admin/AdminFilesView.vue` | `title: '文件管理', admin: true`，可选 query `userId`。 |
 | `/admin/system` | `features/admin/AdminSystemView.vue` | `title: '系统设置', admin: true`。 |
 
-既有登录守卫验证成功后，对 `to.meta.admin` 额外检查 `useAccount().user.value?.isAdmin`，非管理员返回 `/drive` 或权限提示页。侧栏管理入口只向管理员展示。各管理页面本身也验证角色，角色不符时不会请求管理接口；后端仍是权限判定的依据。
+登录守卫进入管理路由前重新读取当前会话，并检查 `to.meta.admin` 与 `useAccount().user.value?.isAdmin`；普通用户转到 `/forbidden` 权限提示页。侧栏管理入口只向管理员展示。各管理页面本身也验证角色，角色不符时不会请求管理接口；后端仍独立执行鉴权。
 
-三个管理页面包含局部 `AdminNavigation`，因此侧栏也可以只提供一个管理入口。个人设置改密成功会清除全局会话并跳 `/auth/login?passwordChanged=1`；登录页可以按此固定标志显示提示，不能把它当作权限凭据。
+侧栏的“管理控制台”打开用户管理，三个管理页面通过局部 `AdminNavigation` 切换。个人设置改密成功会清除全局会话并跳 `/auth/login?completed=reset`，登录页显示密码更新提示；该参数仅用于提示，不能作为权限凭据。
 
 ## 个人设置
 
@@ -47,11 +47,10 @@
 
 初始配额为 1–1048576 整数 MB；标题 1–150 字且不含控制字符；正文不超过 5000 字，必须包含字面 `%s`（`%S` 不等价）。预览以明确标注的示例验证码 12345 替换每处 `%s`，使用纯文本，绝不执行模板 HTML。保存成功但读取失败时提示核对，不显示已确认成功。
 
-## 发布与验证
+## 验证
 
-- `frontend-settings-slice.json` 只包含个人设置目录，可先独立接线与发布。
-- `frontend-admin-slice.json` 包含管理目录及本文档，随后独立接线与发布。
-- 两个模块共用现有主题变量和 `api/client`，没有新增依赖。
-- 每个页面及接口有 Vitest 测试，覆盖角色守卫、表单边界、真实参数、分页、失败与重试、确认流程、会话失效和敏感字段白名单。
+两个模块共用现有主题变量和 `api/client`。Vitest 覆盖角色守卫、表单边界、接口参数、分页、失败与重试、确认流程、会话失效和敏感字段白名单。
 
-本模块开发阶段没有操作浏览器；页面视觉和真实服务交互由接线路由后的整体验收继续核对。
+真实浏览器已完成昵称修改和读回、头像上传及账户栏同步、用户筛选、配额增减读回、禁用/启用、按用户查询文件和预览，以及系统设置保存读回。密码修改、双会话撤销、禁用后旧会话失效、永久删除与空间回退另有隔离 HTTP/MySQL/Redis 验收，未把组件替身当成真实写入证据。
+
+当前使用说明和浏览器记录见 [个人设置](ACCOUNT.md)、[管理控制台](ADMIN.md) 与 [更新日志](../UPDATELOG.md)。后端证据见 [测试报告](https://github.com/Enderherman/Netdisk/blob/master/docs/TEST-REPORT.md)。
